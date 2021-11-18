@@ -1,0 +1,85 @@
+From 92900076c55cd35cd8a327bf009cd1f8beebb479 Mon Sep 17 00:00:00 2001
+From: ryancheung <ryancheung.go@gmail.com>
+Date: Fri, 20 Mar 2020 18:23:38 +0800
+Subject: [PATCH] Win64 patch
+
+---
+ include/freetype/ftimage.h |  6 +++++-
+ include/freetype/fttypes.h | 24 ++++++++++++++++++++----
+ 2 files changed, 25 insertions(+), 5 deletions(-)
+
+diff --git a/include/freetype/ftimage.h b/include/freetype/ftimage.h
+index face34f..96a76a4 100644
+--- a/include/freetype/ftimage.h
++++ b/include/freetype/ftimage.h
+@@ -55,7 +55,11 @@ FT_BEGIN_HEADER
+    *   the context, these can represent distances in integer font units, or
+    *   16.16, or 26.6 fixed-point pixel coordinates.
+    */
+-  typedef signed long  FT_Pos;
++#if _WIN64
++  typedef signed __int64 FT_Pos;
++#else
++  typedef signed long FT_Pos;
++#endif
+ 
+ 
+   /**************************************************************************
+diff --git a/include/freetype/fttypes.h b/include/freetype/fttypes.h
+index 1057150..3c2906a 100644
+--- a/include/freetype/fttypes.h
++++ b/include/freetype/fttypes.h
+@@ -239,7 +239,11 @@ FT_BEGIN_HEADER
+    * @description:
+    *   A typedef for signed long.
+    */
+-  typedef signed long  FT_Long;
++#if _WIN64
++  typedef signed __int64  FT_Long;
++#else
++  typedef signed long FT_Long;
++#endif
+ 
+ 
+   /**************************************************************************
+@@ -250,7 +254,11 @@ FT_BEGIN_HEADER
+    * @description:
+    *   A typedef for unsigned long.
+    */
+-  typedef unsigned long  FT_ULong;
++#if _WIN64
++  typedef unsigned __int64  FT_ULong;
++#else
++  typedef unsigned long FT_ULong;
++#endif
+ 
+ 
+   /**************************************************************************
+@@ -272,7 +280,11 @@ FT_BEGIN_HEADER
+    * @description:
+    *   A signed 26.6 fixed-point type used for vectorial pixel coordinates.
+    */
+-  typedef signed long  FT_F26Dot6;
++#if _WIN64
++  typedef signed __int64  FT_F26Dot6;
++#else
++  typedef unsigned long FT_F26Dot6;
++#endif
+ 
+ 
+   /**************************************************************************
+@@ -284,7 +296,11 @@ FT_BEGIN_HEADER
+    *   This type is used to store 16.16 fixed-point values, like scaling
+    *   values or matrix coefficients.
+    */
+-  typedef signed long  FT_Fixed;
++#if _WIN64
++  typedef signed __int64  FT_Fixed;
++#else
++  typedef unsigned long FT_Fixed;
++#endif
+ 
+ 
+   /**************************************************************************
+-- 
+2.19.0.windows.1

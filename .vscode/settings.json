@@ -1,0 +1,21 @@
+{
+    "cmake.buildDirectory": "${workspaceRoot}/build",
+    "cmake.configureSettings": {
+        "CMAKE_VERBOSE_MAKEFILE": false,
+        //"CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        //"CMAKE_C_FLAGS_RELEASE": "-g0",
+        //"CMAKE_TOOLCHAIN_FILE": "E:/Android/android-ndk-r21/build/cmake/android.toolchain.cmake",
+        //"ANDROID_ABI": "arm64-v8a",
+        //"ANDROID_ABI": "armeabi-v7a",
+        //"ANDROID_ABI": "x86",
+        //"ANDROID_ABI": "x86_64",
+
+        "BUILD_SHARED_LIBS": true,
+        "CMAKE_DISABLE_FIND_PACKAGE_HarfBuzz": true,
+        "CMAKE_DISABLE_FIND_PACKAGE_PNG": true,
+        "CMAKE_DISABLE_FIND_PACKAGE_ZLIB": true,
+        "CMAKE_DISABLE_FIND_PACKAGE_BZip2": true,
+        "CMAKE_DISABLE_FIND_PACKAGE_BrotliDec": true
+    },
+    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+}
