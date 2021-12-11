@@ -1,0 +1,39 @@
+name: Build (iOS/tvOS)
+
+on: [push, pull_request]
+
+jobs:
+  Build:
+    name: ${{ matrix.platform.name }}
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+        - { name: iOS, archflag: -arch arm64, sdk: iphoneos }
+        - { name: iOS Sim, archflag: -arch arm64 -arch x86_64, sdk: iphonesimulator }
+        - { name: tvOS, archflag: -arch arm64, sdk: appletvos }
+        - { name: tvOS Sim, archflag: -arch arm64 -arch x86_64, sdk: appletvsimulator }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: CMake Configure
+        run: >
+          cmake -B build -G Xcode
+          -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_PNG=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=1
+          -DCMAKE_C_FLAGS=-m${{ matrix.platform.sdk }}-version-min=11
+
+      - name: Build
+        run: |
+          xcodebuild -project build/freetype.xcodeproj -target freetype ${{ matrix.platform.archflag }} only_active_arch=no -configuration Release -sdk ${{ matrix.platform.sdk }} clean build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FreeType Artifacts ${{ matrix.platform.name }}
+          path: build/Release/*.a
