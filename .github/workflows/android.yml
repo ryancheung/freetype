@@ -1,0 +1,44 @@
+name: Build (Android)
+
+on: [push, pull_request]
+
+jobs:
+  android:
+    name: Android ${{ matrix.platform.abi }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+        - { abi: x86 }
+        - { abi: x86_64 }
+        - { abi: armeabi-v7a }
+        - { abi: arm64-v8a }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r21e
+
+      - name: Configure CMake (${{ matrix.platform.abi }})
+        run: >
+          cmake -B build
+          -DCMAKE_TOOLCHAIN_FILE=$(dirname $(which ndk-build))/build/cmake/android.toolchain.cmake
+          -DANDROID_ABI=${{ matrix.platform.abi }}
+          -DBUILD_SHARED_LIBS=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_PNG=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=1
+          -DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=1
+      - name: Build (${{ matrix.platform.abi }})
+        run: cmake --build build/ --clean-first --config Release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }} Android Artifacts (${{ matrix.platform.abi }})
+          path: build/*.so
