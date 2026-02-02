@@ -11,10 +11,10 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { abi: x86 }
-        - { abi: x86_64 }
-        - { abi: armeabi-v7a }
-        - { abi: arm64-v8a }
+        - { abi: x86, triplet: x86-android }
+        - { abi: x86_64, triplet: x64-android }
+        - { abi: armeabi-v7a, triplet: arm-neon-android }
+        - { abi: arm64-v8a, triplet: arm64-android }
 
     steps:
       - name: Checkout
@@ -22,19 +22,29 @@ jobs:
 
       - uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r21e
+          ndk-version: r24
+
+      - name: Setup vcpkg
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          ./bootstrap-vcpkg.sh
+          export ANDROID_NDK_HOME=$(dirname $(which ndk-build))
+#          ./vcpkg install libpng --triplet ${{ matrix.platform.triplet }}
 
       - name: Configure CMake (${{ matrix.platform.abi }})
         run: >
           cmake -B build
-          -DCMAKE_TOOLCHAIN_FILE=$(dirname $(which ndk-build))/build/cmake/android.toolchain.cmake
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$(dirname $(which ndk-build))/build/cmake/android.toolchain.cmake
           -DANDROID_ABI=${{ matrix.platform.abi }}
           -DBUILD_SHARED_LIBS=1
+          -DFT_REQUIRE_PNG=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=1
-          -DCMAKE_DISABLE_FIND_PACKAGE_PNG=1
-          -DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=1
           -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=1
           -DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=1
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.platform.triplet }}
+          -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384"
       - name: Build (${{ matrix.platform.abi }})
         run: cmake --build build/ --clean-first --config Release
 

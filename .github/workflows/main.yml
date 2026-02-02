@@ -11,17 +11,25 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-        - { name: Windows (x64), os: windows-latest, flags: -A x64 }
-        - { name: Windows (ARM64), os: windows-latest, flags: -A ARM64 }
-        - { name: Windows (x86), os: windows-latest, flags: -A Win32 }
-        - { name: UWP (x64),     os: windows-latest, flags: -A x64 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0" }
-        - { name: UWP (ARM64),     os: windows-latest, flags: -A ARM64 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0" }
-        - { name: UWP (x86),     os: windows-latest, flags: -A Win32 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0" }
-        - { name: Linux,         os: ubuntu-latest,  flags: }
-        - { name: MacOS,         os: macos-latest,   flags: -DCMAKE_OSX_ARCHITECTURES=arm64\;x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11 }
+        - { name: Windows (x64), os: windows-latest, flags: -A x64, triplet: x64-windows-static }
+        - { name: Windows (ARM64), os: windows-latest, flags: -A ARM64, triplet: arm64-windows-static }
+        - { name: Windows (x86), os: windows-latest, flags: -A Win32, triplet: x86-windows-static }
+        - { name: UWP (x64),     os: windows-latest, flags: -A x64 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0", triplet: x64-uwp-static-md }
+        - { name: UWP (ARM64),     os: windows-latest, flags: -A ARM64 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0", triplet: arm64-uwp-static-md }
+        - { name: UWP (x86),     os: windows-latest, flags: -A Win32 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION="10.0", triplet: x86-uwp-static-md }
+        - { name: Linux,         os: ubuntu-latest,  flags: , triplet: x64-linux }
+        - { name: MacOS (x64),   os: macos-latest,   flags: -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11, triplet: x64-osx }
+        - { name: MacOS (ARM64), os: macos-latest,   flags: -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11, triplet: arm64-osx }
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup vcpkg
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          cd vcpkg
+          ${{ runner.os == 'Windows' && '.\bootstrap-vcpkg.bat' || './bootstrap-vcpkg.sh' }}
+#          .\vcpkg install libpng --triplet ${{ matrix.platform.triplet }}
 
       - name: Apply Win64 patch
         if: matrix.platform.name == 'Windows (x64)' || matrix.platform.name == 'Windows (ARM64)' || matrix.platform.name == 'UWP (x64)' || matrix.platform.name == 'UWP (ARM64)'
@@ -31,12 +39,14 @@ jobs:
         run: >
           cmake -B build
           -DBUILD_SHARED_LIBS=1
+          -DFT_REQUIRE_PNG=ON
           -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=1
-          -DCMAKE_DISABLE_FIND_PACKAGE_PNG=1
-          -DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=1
           -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=1
           -DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=1
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.platform.triplet }}
           ${{ matrix.platform.flags }}
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
       - name: Build (CMake)
         id: build
         run: |
@@ -50,3 +60,36 @@ jobs:
             build/Release/*.lib
             build/*.so
             build/*.dylib
+
+  Create-MacOS-Fat-Library:
+    name: Create macOS Fat Library
+    runs-on: macos-latest
+    needs: Build
+
+    steps:
+      - name: Download macOS x64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: FreeType Artifacts MacOS (x64)
+          path: macos-x64
+
+      - name: Download macOS ARM64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: FreeType Artifacts MacOS (ARM64)
+          path: macos-arm64
+
+      - name: Create macOS universal library
+        run: |
+          mkdir -p fat-libraries
+          lipo -create \
+            macos-x64/libfreetype.dylib \
+            macos-arm64/libfreetype.dylib \
+            -output fat-libraries/libfreetype.dylib
+          lipo -info fat-libraries/libfreetype.dylib
+
+      - name: Upload macOS fat library
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeType Artifacts MacOS (x64 + ARM64)
+          path: fat-libraries/
